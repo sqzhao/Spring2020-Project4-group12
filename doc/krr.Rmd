@@ -14,18 +14,12 @@ if(!require("krr")){
   remotes::install_github("TimothyKBook/krr")
 }
 
-
 if(!require("tidyverse")){
   install.packages("tidyverse")
 }
 
-#if(!require("wordspace")){
-#  install.packages("wordspace")
-#}
-
 library(krr)
 library(tidyverse)
-#library(wordspace)
 
 source("../lib/Matrix_Factorization.R")
 source("../lib/cross_validation.R")
