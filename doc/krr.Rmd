@@ -1,0 +1,194 @@
+---
+title: "krr"
+author: "Lu Cheng"
+date: "4/17/2020"
+output: pdf_document
+---
+
+```{r}
+if(!require("remotes")){
+  install.packages("remotes")
+}
+
+if(!require("krr")){
+  remotes::install_github("TimothyKBook/krr")
+}
+
+
+if(!require("tidyverse")){
+  install.packages("tidyverse")
+}
+
+#if(!require("wordspace")){
+#  install.packages("wordspace")
+#}
+
+library(krr)
+library(tidyverse)
+#library(wordspace)
+
+source("../lib/Matrix_Factorization.R")
+source("../lib/cross_validation.R")
+```
+
+
+```{r}
+# result <- gradesc(f = 10, lambda = 0.1,lrate = 0.01, max.iter = 100, stopping.deriv = 0.01,
+#                    data = data, train = data_train, test = data_test)
+# 
+# save(result, file = "../output/mat_fac.RData")
+
+#write.csv(result$p, file = "../output/p.csv")
+#write.csv(result$q, file = "../output/q.csv")
+#write.csv(result$b_user, file = "../output/b_user.csv")
+#write.csv(result$b_movie, file = "../output/b_movie.csv")
+#write.csv(result$b_bin, file = "../output/b_bin.csv")
+#write.csv(result$mu, file = "../output/mu.csv")
+
+
+```
+
+
+```{r}
+load(file = "../output/mat_fac.RData")
+
+p <- read.csv("../output/p.csv")
+q <- read.csv("../output/q.csv", header=F) 
+mu <- read.csv("../output/mu.csv")
+b_user <- read.csv("../output/b_user.csv")
+b_movie <- read.csv("../output/b_movie.csv")
+b_bin <- read.csv("../output/b_bin.csv")
+rating <- read.csv("../data/ml-latest-small/ratings.csv")
+
+
+```
+
+```{r}
+q_trans <- t(q[-1,-1])
+
+normal <- function(a){return(a / sqrt(sum(a^2)))}
+q_trans_normalized <- apply(q_trans, 2, normal)
+rownames(q_trans_normalized) <- 1:nrow(q_trans_normalized)
+colnames(q_trans_normalized) <- 1:ncol(q_trans_normalized)
+
+movieId <- as.integer(as.vector(unlist(c(q[1,])))[-1])
+
+q_trans_normalized <- cbind(movieId, q_trans_normalized)
+q_trans_normalized <- as_tibble(q_trans_normalized)
+
+rating_merge <- rating %>% 
+  as_tibble() %>%
+  left_join(q_trans_normalized, by = c('movieId' = 'movieId')) %>%
+  mutate(movieId = as.integer(movieId))
+
+rating_merge
+```
+    
+
+```{r}
+set.seed(0)
+
+test_idx <- sample(1:nrow(rating_merge), round(nrow(rating_merge)/5, 0))
+train_idx <- setdiff(1:nrow(rating_merge), test_idx)
+
+train_data <- rating_merge[train_idx,]
+test_data <- rating_merge[test_idx,]
+
+n_users <- length(unique(rating_merge$userId))
+
+
+test_split <- list()
+for (i in 1:n_users){
+  test_split[[i]] <- cbind(test_data[test_data$userId == i, 'rating'],
+                      test_data[test_data$userId == i, 5:dim(test_data)[2]])
+}
+
+train_split <- list()
+for (i in 1:n_users){
+  train_split[[i]] <- cbind(train_data[train_data$userId == i, 'rating'],
+                      train_data[train_data$userId == i, 5:dim(train_data)[2]])
+}
+
+```   
+    
+
+```{r}
+cv.krr <- function(data, kfold, lambda){
+  
+  set.seed(123)
+  cv_mean <- c()
+  cv_tuning <- c()
+  for (i in 1:n_users){
+    x <- as.matrix(data[[i]][, -1])
+    y <- as.matrix(data[[i]][, 1])
+    n <- nrow(x)
+    cv_id <- createFolds(1:n, k = kfold)
+    
+    for (j in cv_id){
+    #Split Data in train and validation sets
+      x_train_cv <- x[-j,]
+      y_train_cv <- y[-j]
+      x_validation_cv <- x[j,]
+      y_validation_cv <- y[j]
+    
+    #Run Model
+      model_cv <- krr(x_train_cv, y_train_cv, lambda = lambda, sigma = 1)
+    #Estimate predictin of validation test
+      pred_cv <- predict(model_cv, x_validation_cv)
+    
+    #Calculate RMSE
+      rmse_cv <- sqrt(mean((y_validation_cv - pred_cv)^2))
+      cv_tuning <- append(cv_tuning, rmse_cv)
+      
+    }
+    cv_mean <- append(cv_mean, mean(cv_tuning))
+  }  
+  return(cv_mean)
+}
+```
+
+```{r}
+lambdas <- c(5, 6, 7)
+rmse_tune <- data.frame(lambdas = lambdas, rmse = rep(0,length(lambdas)))
+for (i in 1:length(lambdas)){
+  m <- cv.krr(train_split, 5, lambdas[i])
+  rmse_tune[i,2] <-  sum(m)
+}
+
+best_lambda <- rmse_tune %>%
+  filter(rmse == min(rmse))
+best_lambda <- best_lambda$lambda
+```
+
+
+```{r}
+
+train_model <- vector(mode="list",length = n_users)
+for(i in 1:n_users){
+  train_model[[i]] = krr(as.matrix(train_split[[i]][, -1]), as.matrix(train_split[[i]][, 1]), best_lambda)
+}
+
+#get prediction in a matrix with dimension 610*9724
+# pred_rating <- matrix(NA,nrow = n_users,ncol = dim(q)[2])
+# for (i in 1:n_users){
+#   pred_rating[i,] <- predict(train_model[[i]], t(q_trans_normalized))
+# }
+
+```
+
+```{r}
+rmse <- c()
+for (i in 1:n_users){
+  X <- as.matrix(rating_merge[rating_merge$userId == i, 5:dim(rating_merge)[2]])
+  y <- as.matrix(rating_merge[rating_merge$userId == i, 'rating'])
+  y_pred <- predict(train_model[[i]], X)
+  rmse <- append(rmse, sqrt(mean((y - y_pred)^2)))
+}
+
+mean(rmse)
+
+```
+
+
+
+
