@@ -18,8 +18,9 @@ if(!require("tidyverse")){
   install.packages("tidyverse")
 }
 
-library(krr)
+
 library(tidyverse)
+library(krr)
 
 source("../lib/Matrix_Factorization.R")
 source("../lib/cross_validation.R")
