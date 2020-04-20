@@ -215,6 +215,7 @@ training_time
     
 compute rmse
 ```{r}
+<<<<<<< HEAD
 rmse.fn <- function(data){
   error <- c()
   for (i in 1:n_users){
@@ -228,10 +229,24 @@ rmse.fn <- function(data){
 
 }
 
+=======
+
+
+error <- c()
+for (i in 1:n_users){
+  X <- as.matrix(test_data[test_data$userId == i, 5:dim(test_data)[2]])
+  y <- as.matrix(test_data[test_data$userId == i, 'rating'])
+  y_pred <- predict(train_model[[i]], X)
+  error <- append(error, (y - y_pred)^2)
+}
+
+sqrt(sum(error) / nrow(test_data))
+>>>>>>> 0c4df1b5dfa347914d50de5551fa790da7d0f871
 
 test_rmse <- rmse.fn(test_data)
 train_rmse <- rmse.fn(train_data)
 
+<<<<<<< HEAD
 test_rmse
 train_rmse
 
@@ -240,5 +255,8 @@ train_rmse
 
 test rmse is 0.9496269   
 train rmse is 0.9429299
+=======
+test rmse is 0.95959
+>>>>>>> 0c4df1b5dfa347914d50de5551fa790da7d0f871
 
 
