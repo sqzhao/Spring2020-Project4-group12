@@ -191,8 +191,7 @@ best_para
 
 
 ```
-lambda = 4, sigma = 2     
-        
+
         
 use the best lambda and sigma to train 610 kernel ridge regression models.
 ```{r}
@@ -240,11 +239,4 @@ train_rmse
 
 
 ```
-
-test rmse is 0.9496269   
-train rmse is 0.9429299
-=======
-test rmse is 0.95959
->>>>>>> 0c4df1b5dfa347914d50de5551fa790da7d0f871
-
 
