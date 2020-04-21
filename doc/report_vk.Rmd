@@ -1,0 +1,246 @@
+---
+title: "Project 4 Report"
+author: "Group 12"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+In this project, we applied the following methods for collaborative filtering:
+
+- factorization algorithm: Stochastic Gradient Descent
+
+- regularization: Temporal Dynamics
+
+- postpocessing: KNN & Kernel Ridge Regression
+
+Our objective is to compare the postporcessing process, and evaluate their results.
+
+### Step 1 Load Data and Train-test Split
+
+```{r Data Preparison warning=FALSE, message=FALSE}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(anytime)
+library(ggplot2)
+library(lubridate)
+run_all <- F
+data <- read.csv("../data/ml-latest-small/ratings.csv")
+set.seed(0)
+
+# Function for dividing time into bins, and add bins to the original data 
+
+bins <- function(data = data){
+  data$date <- anytime(data$timestamp) %>% format("%Y/%m/%d") 
+  df <- data %>% mutate(year = year(date), bin_label = year-1995) %>% data.frame() %>% select(userId, movieId, rating, timestamp, bin_label, date, year)
+  min_day <- df %>% summarise(as.Date(min(date))) %>% as.numeric()
+  df <- df %>% mutate(days_diff=as.numeric(as.Date(date)-min_day)+1) %>% group_by(userId) %>% mutate(user_mean_date=mean(days_diff))
+  return(df)
+}
+
+data_bins <- bins(data=data) 
+```
+
+
+### Step 2 Matrix Factorization
+
+#### Step 2.1 Algorithm and Regularization
+
+- Algorithm: Stochastic Gradient Descent (A1)
+
+- Regularizations: Temporal Dynamics (R3)
+
+```{r}
+index <- sample(1:100000, 5000)
+test_idx <- sample(1:5000, 1000)
+train_idx <- setdiff(1:5000, test_idx)
+data_train <- data_bins[train_idx,]
+data_test <- data_bins[test_idx,]
+U <- length(unique(data_bins[index,]$userId)) #610
+I <- length(unique(data_bins[index,]$movieId)) #9724
+source("../lib/Matrix_Factorization_vk.R")
+source("../lib/Matrix_Factorization.R")
+```
+
+
+#### Step 2.2 Parameter Tuning
+
+We used cross validation to tune the 2 hyperparameters: f and lambda, and select the optimal combination by choosing the one with lowest test RMSE
+
+```{r}
+source("../lib/cross_validation.R")
+source("../lib/cross_validation_vk.R")
+f_list <- c(10, 20, 50)
+l_list <- seq(-3,-1,1)
+f_l <- expand.grid(f_list, l_list)
+```
+
+```{r, eval=FALSE}
+# result_summary <- array(NA, dim = c(4, 10, nrow(f_l))) 
+# run_time <- system.time(for(i in 1:nrow(f_l)){
+#     par <- paste("f = ", f_l[i,1], ", lambda = ", 10^f_l[i,2])
+#     cat(par, "\n")
+#     current_result <- cv.function(data_m, K = 3, f = f_l[i,1], lambda = 10^f_l[i,2])
+#     result_summary[,,i] <- matrix(unlist(current_result), ncol = 10, byrow = T) 
+#     print(result_summary)
+# })
+# save(result_summary, file = "../output/rmse.Rdata")
+```
+
+```{r}
+# load("../output/rmse.Rdata")
+# rmse <- data.frame(rbind(t(result_summary[1,,]), t(result_summary[2,,])), 
+#                    train_test = rep(c("Train", "Test"), each = 9), 
+#                    par = rep(paste("f = ", f_l[,1], ", lambda = ", 10^f_l[,2]), times = 2)) %>%
+#   gather("epoch", "RMSE", -train_test, -par)
+# 
+# rmse$epoch <- as.numeric(gsub("X", "", rmse$epoch))
+# 
+# cv.result <- ggplot(rmse, aes(x = epoch, y = RMSE, col = train_test)) + geom_point() + 
+#   facet_grid(~par)+ggtitle("RMSE of Tuning")
+# ggsave(plot=cv.result, filename = "cv_result.jpg",height = 100, width = 400, units="mm")
+```
+
+```{r, eval=FALSE}
+#time1 <- Sys.time()
+#6.59713 hours
+if(run_all){
+  result_summary <- array(NA, dim = c(4, 10, nrow(f_l)))
+run_time <- system.time(for(i in 1:nrow(f_l)){
+    par <- paste("f = ", f_l[i,1], ", lambda = ", 10^f_l[i,2])
+    cat(par, "\n")
+    current_result <- cv.function_r3(data_bins[index,], K = 3, f = f_l[i,1], lambda = 10^f_l[i,2])
+    result_summary[,,i] <- matrix(unlist(current_result), ncol = 10, byrow = T) 
+    #print(result_summary_r3)
+})
+#time2 <- Sys.time()
+#time2-time1
+save(result_summary, file = "../output/rmse_r3.Rdata")
+}
+```
+
+```{r}
+load("../output/rmse_r3.Rdata")
+rmse_r3 <- data.frame(rbind(t(result_summary[1,,]), t(result_summary[2,,])), 
+                   train_test = rep(c("Train", "Test"), each = 9), 
+                   par = rep(paste("f = ", f_l[,1], ", lambda = ", 10^f_l[,2]), times = 2)) %>%
+  gather("epoch", "RMSE", -train_test, -par)
+
+rmse_r3$epoch <- as.numeric(gsub("X", "", rmse_r3$epoch))
+
+ggplot(rmse_r3, aes(x = epoch, y = RMSE, col = train_test)) + geom_point() + 
+  facet_grid(~par)+ggtitle("RMSE of Tuning")
+```
+
+```{r}
+test_idx <- sample(1:nrow(data_bins), round(nrow(data_bins)/5, 0))
+train_idx <- setdiff(1:nrow(data), test_idx)
+data_train <- data_bins[train_idx,]
+data_test <- data_bins[test_idx,]
+U <- length(unique(data_bins$userId)) #610
+I <- length(unique(data_bins$movieId)) #9724
+```
+
+
+```{r, eval= FALSE}
+if (run_all){
+    result <- gradesc.r3(f = 10, lambda = 0.1,lrate = 0.01, max.iter = 100, stopping.deriv = 0.01,
+                     data = data_bins, train = data_train, test = data_test)
+  
+  save(result, file = "../output/mat_fac_r3.RData")
+  write.csv(result$p, file = "../output/p.csv")
+  write.csv(result$q, file = "../output/q.csv")
+  write.csv(result$b_user, file = "../output/b_user.csv")
+  write.csv(result$b_movie, file = "../output/b_movie.csv")
+  write.csv(result$b_bin, file = "../output/b_bin.csv")
+  write.csv(result$mu, file = "../output/mu.csv")
+}
+```
+
+```{r}
+load(file = "../output/mat_fac_r3.RData")
+
+RMSE_r3 <- data.frame(epochs = seq(10, 100, 10), 
+                   Training_MSE = result$train_RMSE, 
+                   Test_MSE = result$test_RMSE) %>% 
+  gather(key = train_or_test, value = RMSE, -epochs)
+
+ggplot(RMSE_r3, aes(x = epochs, y = RMSE,col = train_or_test)) + 
+  geom_point() + scale_x_discrete(limits = seq(10, 100, 10)) + 
+  xlim(c(0, 100)) + 
+  ggtitle("RMSE (f=10, lambda=0.1)")
+```
+
+### Step 3 Postprocessing
+After matrix factorization, postporcessing will be performed to improve accuracy.
+The referenced papers are:
+
+P2:[Postprocessing SVD with KNN](./paper/P2 Improving regularized singular value decomposition for collaborative filtering .pdf) Section 3.5
+
+P3:[Postprocessing SVD with kernel ridge regression](./paper/P2 Improving regularized singular value decomposition for collaborative filtering .pdf) Section 3.6
+
+#### Postprocessing: SVD with KNN
+
+After matrix factorization, postporcessing will be performed to improve accuracy.
+
+KNN Function
+```{r}
+vec <- function(x) {
+  
+  return(sqrt(sum(x^2)))
+  
+  }
+pred_knn <- function(data_train, data_test, q)
+{
+  
+  norm_q <- apply(q,2,vec)
+  sim <- t(t((t(q) %*% q)/ norm_q) / norm_q)
+  colnames(sim) <- colnames(q)
+  rownames(sim) <- colnames(q)
+  pred_test <- rep(0,nrow(data_test))
+  
+  for (i in 1:nrow(data_test)){
+    user_id <- data_test$userId[i]
+    movie_id <- data_test$movieId[i]
+    train <- data_train[data_train$userId == user_id & data_train$movieId != movie_id,]
+    movie_train <- train$movieId
+    sim_vec <- sim[rownames(sim) == movie_id, colnames(sim) %in% movie_train]
+    movie <- names(sim_vec)[which.max(sim_vec)]
+    pred_test[i] <- train[train$movieId == movie,][3]
+  }
+  
+  pred_test <- as.matrix(unlist(pred_test))
+  rmse_test <- sqrt(mean((data_test$rating-pred_test)^2))
+  return(list(pred_test = pred_test, rmse_test = rmse_test))
+}
+```
+
+
+```{r}
+load(file = "../output/mat_fac_r3.RData")
+q <- result$q
+p2_result_test <- pred_knn(data_train, data_test, q)
+test_rmse_p2 <- p2_result_test['rmse_test']
+cat("The RMSE of Algorithm with Postprocessing (SVD with KNN) is", as.numeric(test_rmse_p2))
+```
+
+#### Postprocessing: SVD with kernel ridge regressio
+```{r}
+
+```
+
+
+### Step 4 Evaluation
+You should visualize training and testing RMSE by different dimension of factors and epochs ([One Epoch is when an ENTIRE dataset is passed forward and backward through the neural network only ONCE](https://towardsdatascience.com/epoch-vs-iterations-vs-batch-size-4dfb9c7ce9c9)). 
+
+```{r}
+library(ggplot2)
+
+RMSE <- data.frame(epochs = seq(10, 100, 10), Training_MSE = result$train_RMSE, Test_MSE = result$test_RMSE) %>% gather(key = train_or_test, value = RMSE, -epochs)
+
+RMSE %>% ggplot(aes(x = epochs, y = RMSE,col = train_or_test)) + geom_point() + scale_x_discrete(limits = seq(10, 100, 10)) + xlim(c(0, 100))
+
+```
+
