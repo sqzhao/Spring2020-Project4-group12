@@ -4,18 +4,18 @@
 
 Term: Spring 2020
 
-+ Team #
-+ Projec title: Lorem ipsum dolor sit amet
++ Team 12
++ Projec title: Algorithm implementation and evaluation: Collaborative Filtering
 + Team members
-	+ Blum, Jacquelyn jeb2266@columbia.edu
-	+ Cheng, Lu lc3452@columbia.edu
-	+ Lee, Sol sl4548@columbia.edu
-	+ Ling, Liangcao ll3337@columbia.edu
-	+ Sui, Vikki ks3747@columbia.edu
-	+ Zhao, Siqi sz2866@columbia.edu
-	
-+ Project summary: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-	
+	+ Siqi Zhao (Prensenter)
+	+ Vikki Sui
+	+ Liangcao Ling
+	+ Sol Lee
+	+ Lu Cheng
+    + Jacquelyn Blum
+
++ Project summary: In this project, our group implement the matrix factorization algorithm for recommender system and compare two diffenrent methods of post processing. The matrix factorization algorithm outputs a feature matrix for both users and movies so that one can predict the rating of a specific user - movie pair using those matrix. First, we include temporal effect of users and movies in the loss function. Second we build the algorithm using stochastic gradient descent to estimate the parameters in the loss function. Then we use cross - validation to choose the best parameters. Last we compare the test RMSE of two different postprocessing methods - KNN and kernel ridge regression. In the result we find out that ...  
+
 **Contribution statement**: [default] All team members contributed equally in all stages of this project. All team members approve our work presented in this GitHub repository including this contributions statement. 
 
 Following [suggestions](http://nicercode.github.io/blog/2013-04-05-projects/) by [RICH FITZJOHN](http://nicercode.github.io/about/#Team) (@richfitz). This folder is orgarnized as follows.
