@@ -34,17 +34,17 @@ source("../lib/cross_validation.R")
 
 
 ```{r}
-result <- gradesc(f = 10, lambda = 0.1,lrate = 0.01, max.iter = 100, stopping.deriv = 0.01,
-                   data = data, train = data_train, test = data_test)
+#result <- gradesc(f = 10, lambda = 0.1,lrate = 0.01, max.iter = 100, stopping.deriv = 0.01,
+ #                  data = data, train = data_train, test = data_test)
 
 # save(result, file = "../output/mat_fac.RData")
 
-write.csv(result$p, file = "../output/p.csv")
-write.csv(result$q, file = "../output/q.csv")
-write.csv(result$b_user, file = "../output/b_user.csv")
-write.csv(result$b_movie, file = "../output/b_movie.csv")
-write.csv(result$b_bin, file = "../output/b_bin.csv")
-write.csv(result$mu, file = "../output/mu.csv")
+#write.csv(result$p, file = "../output/p.csv")
+#write.csv(result$q, file = "../output/q.csv")
+#write.csv(result$b_user, file = "../output/b_user.csv")
+#write.csv(result$b_movie, file = "../output/b_movie.csv")
+#write.csv(result$b_bin, file = "../output/b_bin.csv")
+#write.csv(result$mu, file = "../output/mu.csv")
 
 
 ```
@@ -55,8 +55,8 @@ After matrix factorization, postporcessing will be performed to improve accuracy
       
 import data
 ```{r}
-p <- read.csv("../output/p.csv")
-q <- read.csv("../output/q.csv", header=F) 
+load(file = "../output/mat_fac_r3.RData")
+q <- result$q
 # mu <- read.csv("../output/mu.csv")
 # b_user <- read.csv("../output/b_user.csv")
 # b_movie <- read.csv("../output/b_movie.csv")
@@ -67,141 +67,81 @@ rating <- read.csv("../data/ml-latest-small/ratings.csv")
 ```
      
 normalize each vector $q_i$, i.e.$\frac{q_i}{||q_i||}$    
-merge 'rating' and 'q_trans_normalized' datasets by movieId
 ```{r}
-q_trans <- t(q[-1,-1])
-
-normal <- function(a){return(a / sqrt(sum(a^2)))}
-q_trans_normalized <- apply(q_trans, 2, normal)
-rownames(q_trans_normalized) <- 1:nrow(q_trans_normalized)
-colnames(q_trans_normalized) <- 1:ncol(q_trans_normalized)
+library("pracma")
+norm_vec <- function(x) {return(x/Norm(x))}
+norm_q <- apply(result$q, 2, norm_vec)
 
 # separate movieId from q dataset
-movieId <- as.integer(as.vector(unlist(c(q[1,])))[-1])
-
-#combine movieId with q_trans_normalized dataset
-q_trans_normalized <- cbind(movieId, q_trans_normalized)
-q_trans_normalized <- as_tibble(q_trans_normalized)
-
-rating_merge <- rating %>% 
-  as_tibble() %>%
-  left_join(q_trans_normalized, by = c('movieId' = 'movieId')) %>%
-  mutate(movieId = as.integer(movieId))
-
-rating_merge
+movieID <- colnames(q)
 ```
     
-split 'rating_mearge' dataset into train and test datasets
-```{r}
-set.seed(0)
 
-test_idx <- sample(1:nrow(rating_merge), round(nrow(rating_merge)/5, 0))
-train_idx <- setdiff(1:nrow(rating_merge), test_idx)
-
-# 80% training
-train_data <- rating_merge[train_idx,]
-#20% testing
-test_data <- rating_merge[test_idx,]
-
-#number of users
-n_users <- length(unique(rating_merge$userId))
-
-
-#split data for 610 users
-test_split <- list()
-for (i in 1:n_users){
-  test_split[[i]] <- cbind(test_data[test_data$userId == i, 'rating'],
-                      test_data[test_data$userId == i, 5:dim(test_data)[2]])
-}
-
-train_split <- list()
-for (i in 1:n_users){
-  train_split[[i]] <- cbind(train_data[train_data$userId == i, 'rating'],
-                      train_data[train_data$userId == i, 5:dim(train_data)[2]])
-}
-
-```   
-    
 ##### Tuning parameter for krr    
 set the kernel as Gaussian as Paper2 said and use cross validation to get a smaller RMSE.
-write a function to do cross validation for parameters lambda and sigma in krr
+write a function to do cross validation for parameters lambda in krr
+
 ```{r}
-cv.krr <- function(data, kfold, lambda, sigma){
-  
-  set.seed(123)
-  cv_mean <- c()
-  cv_tuning <- c()
-  for (i in 1:n_users){
-    x <- as.matrix(data[[i]][, -1])
-    y <- as.matrix(data[[i]][, 1])
-    n <- nrow(x)
-    cv_id <- createFolds(1:n, k = kfold)
-    
-    for (j in cv_id){
-    #Split Data in train and validation sets
-      x_train_cv <- x[-j,]
-      y_train_cv <- y[-j]
-      x_validation_cv <- x[j,]
-      y_validation_cv <- y[j]
-    
-    #Run Model
-      model_cv <- krr(x_train_cv, y_train_cv, lambda = lambda, sigma = sigma)
-    #Estimate predictin of validation test
-      pred_cv <- predict(model_cv, x_validation_cv)
-    
-    #Calculate RMSE
-      rmse_cv <- sqrt(mean((y_validation_cv - pred_cv)^2))
-      cv_tuning <- append(cv_tuning, rmse_cv)
-      
-    }
-    cv_mean <- append(cv_mean, mean(cv_tuning))
-  }  
-  return(cv_mean)
-}
+cv.krr <- function(dat_train,K, lambda){
+n <- dim(dat_train)[1]
+n.fold <- round(n/K, 0)
+set.seed(0)
+s <- sample(rep(1:K, c(rep(n.fold, K-1), n-(K-1)*n.fold)))  
+test_rmse<-rep(0,K)
+
+for (j in 1:K){
+    train.data <- dat_train[s != j,]
+    test.data <- dat_train[s == j,]
+    tMSE <- 0
+for(i in 1:610){
+   userID = as.character(i)
+
+   movie_train_index <- which(movieID %in% train.data$movieId[which(train.data$userId == userID)])
+   movie_test_index <- which(movieID %in% test.data$movieId[which(test.data$userId == userID)])
+   obj <- krr(t(norm_q[, movie_train_index]), train.data$rating[movie_train_index],lambda)
+   xnew <- norm_q[, movie_test_index]
+   ynew <- predict(obj, t(xnew))
+   ytrue <- test.data$rating[which(test.data$userId == userID)]
+   tMSE <- tMSE + sum((ynew - ytrue)^ 2)
+ }
+   test_rmse[j]<-sqrt(tMSE/nrow(test.data))}
+
+return(mean(test_rmse))}
 ```
    
 Find the best parameters that get a smaller rmse
 ```{r}
 lambdas <- c(4.0, 5.0, 6.0)
-sigmas <- c(1, 2)
-# rmse_tune <- data.frame(lambdas = numeric(), 
-#                         sigmas = numeric(),
-#                         rmse = numeric())
-rmse_tune <- data.frame()
-# colnames(rmse_tune) <- c("lambda", "sigma", "rmse")
+rmse_tune <- data.frame(lambdas = numeric(), rmse = numeric())
+#rmse_tune <- data.frame()
+colnames(rmse_tune) <- c("lambda", "rmse")
 
-for (i in 1:length(lambdas)){
-  for (j in 1:length(sigmas)){
-    m <- cv.krr(train_split, 5, lambdas[i], sigmas[j])
-    rmse <-  sum(m)
-    rmse_tune <- rbind(rmse_tune, c(lambdas[i], sigmas[j], rmse))
-  }
-  
+for (f in 1:length(lambdas)){
+    m <- cv.krr(data_train, 5, lambdas[f])
+    rmse_tune <- rbind(rmse_tune, c(lambdas[i], m))
 }
-colnames(rmse_tune) <- c("lambda", "sigma", "rmse_tune")
+colnames(rmse_tune) <- c("lambda", "rmse")
 
 min_rmse <- rmse_tune %>%
   filter(rmse == min(rmse))
-best_para <- min_rmse[,1:2]
-
+best_para <- min_rmse[,1]
 
 
 best_para
 
-
-
 ```
 
         
-use the best lambda and sigma to train 610 kernel ridge regression models.
+use the best lambda to train 610 kernel ridge regression models.
 ```{r}
 t0 <- Sys.time()
 
 train_model <- vector(mode="list",length = n_users)
 for(i in 1:n_users){
-  train_model[[i]] = krr(as.matrix(train_split[[i]][, -1]), 
-                         as.matrix(train_split[[i]][, 1]),
-                         min_rmse$lambda, min_rmse$sigma)
+  userID = as.character(i)
+
+  movie_train_index <- which(movieID %in% data_train$movieId[which(data_train$userId == userID)])
+  train_model[[i]] = krr(t(norm_q[, movie_train_index]), data_train$rating[movie_train_index],best_para)
 }
 
 t1 <- Sys.time()
@@ -216,22 +156,24 @@ compute rmse
 ```{r}
 
 rmse.fn <- function(data){
-  error <- c()
-  for (i in 1:n_users){
-    X <- as.matrix(data[data$userId == i, 5:dim(data)[2]])
-    y <- as.matrix(data[data$userId == i, 'rating'])
-    y_pred <- predict(train_model[[i]], X)
-    error <- append(error, (y - y_pred)^2)
+  error <- 0
+  for (i in 1:610){
+    userID = as.character(i)
+    movie_test_index <- which(movieID %in% data$movieId[which(data$userId == userID)])
+    xnew <- norm_q[, movie_test_index]
+    ynew <- predict(train_model[[i]], t(xnew))
+    ytrue <- data$rating[which(data$userId == userID)]
+    error <- error + sum((ynew - ytrue)^ 2)
   }
 
-  return(sqrt(sum(error) / nrow(data)))
+  return(sqrt(error / nrow(data)))
 
 }
 
 
 
-test_rmse <- rmse.fn(test_data)
-train_rmse <- rmse.fn(train_data)
+test_rmse <- rmse.fn(data_test)
+train_rmse <- rmse.fn(data_train)
 
 
 test_rmse
