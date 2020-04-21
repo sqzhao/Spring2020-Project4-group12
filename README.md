@@ -12,7 +12,7 @@ Term: Spring 2020
 	+ Liangcao Ling
 	+ Sol Lee
 	+ Lu Cheng
-   + Jacquelyn Blum
+    + Jacquelyn Blum
 
 + Project summary: In this project, our group implement the matrix factorization algorithm for recommender system and compare two diffenrent methods of post processing. The matrix factorization algorithm outputs a feature matrix for both users and movies so that one can predict the rating of a specific user - movie pair using those matrix. First, we include temporal effect of users and movies in the loss function. Second we build the algorithm using stochastic gradient descent to estimate the parameters in the loss function. Then we use cross - validation to choose the best parameters. Last we compare the test RMSE of two different postprocessing methods - KNN and kernel ridge regression. In the result we find out that ...  
 

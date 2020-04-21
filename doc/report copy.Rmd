@@ -19,7 +19,7 @@ Our objective is to compare the postporcessing process, and evaluate their resul
 
 ### Step 1 Load Data and Train-test Split
 
-```{r Data Preparison warning=FALSE, message=FALSE}
+```{r warning=FALSE, message=FALSE}
 library(dplyr)
 library(tidyr)
 library(ggplot2)
@@ -46,18 +46,15 @@ bins <- function(n, data = data){
   return(df)
 }
 
-data_bins <- bins(30, data=data) 
+data_bins <- bins(23, data=data) # bins(30, data=data) or bins(23, data=data)
+#data_bins <- data_bins[1:500,] #shorter example
 
 test_idx <- sample(1:nrow(data_bins), round(nrow(data_bins)/5, 0))
-train_idx <- setdiff(1:nrow(data), test_idx)
+train_idx <- setdiff(1:nrow(data_bins), test_idx)
 data_train <- data_bins[train_idx,]
 data_test <- data_bins[test_idx,]
 
 ```
-
-
-
-
 
 ### Step 2 Matrix Factorization
 
@@ -68,8 +65,8 @@ data_test <- data_bins[test_idx,]
 - Regularizations: Temporal Dynamics (R3)
 
 ```{r}
-U <- length(unique(data_m$userId)) #610
-I <- length(unique(data_m$movieId)) #9724
+U <- length(unique(data_bins$userId)) #610
+I <- length(unique(data_bins$movieId)) #9724
 source("../lib/Matrix_Factorization.R")
 ```
 
@@ -90,7 +87,7 @@ result_summary <- array(NA, dim = c(4, 10, nrow(f_l)))
 run_time <- system.time(for(i in 1:nrow(f_l)){
     par <- paste("f = ", f_l[i,1], ", lambda = ", 10^f_l[i,2])
     cat(par, "\n")
-    current_result <- cv.function(data_m, K = 3, f = f_l[i,1], lambda = 10^f_l[i,2])
+    current_result <- cv.function(data_bins, K = 3, f = f_l[i,1], lambda = 10^f_l[i,2])
     result_summary[,,i] <- matrix(unlist(current_result), ncol = 10, byrow = T) 
     print(result_summary)
   
@@ -119,7 +116,7 @@ ggsave(plot=cv.result, filename = "cv_result.jpg",height = 100, width = 400, uni
 Here is the train and test RMSE for selected set of hyper parameters
 
 ```{r message=F}
-load(file = "../output/mat_fac.RData")
+load(file = "../output/mat_fac.RData") #? load before save
 
 RMSE <- data.frame(epochs = seq(10, 100, 10), 
                    Training_MSE = result$train_RMSE, 
@@ -134,7 +131,7 @@ ggplot(RMSE, aes(x = epochs, y = RMSE,col = train_or_test)) +
 
 ```{r, eval= FALSE}
 result <- gradesc(f = 10, lambda = 0.1,lrate = 0.01, max.iter = 20, stopping.deriv = 0.01,
-                   data = data_m, train = data_train, test = data_test)
+                   data = data_bins, train = data_train, test = data_test)
 
 ```
 
