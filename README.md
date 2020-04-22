@@ -17,7 +17,7 @@ Term: Spring 2020
 + Project summary: In this project, our group implement the matrix factorization algorithm for recommender system and compare two diffenrent methods of post processing. The matrix factorization algorithm outputs a feature matrix for both users and movies so that one can predict the rating of a specific user - movie pair using those matrix. First, we include temporal effect of users and movies in the loss function. Second we build the algorithm using stochastic gradient descent to estimate the parameters in the loss function. Then we use cross - validation to choose the best parameters. Last we compare the test RMSE and train RMSE of two different postprocessing methods - KNN and kernel ridge regression. 
         
 	
-     + Result
+    + Result
 
      | Method      | Train RMSE  | Test RMSE |
      | ------------- |:-------------:| ------------:|
@@ -28,14 +28,14 @@ Term: Spring 2020
 	
 + Reference    
               
-1. Koren, Y., Bell, R. & Volinsky, C. (2009). Matrix factorization techniques for recommender systems. IEEE computer society.
+ 1. Koren, Y., Bell, R. & Volinsky, C. (2009). Matrix factorization techniques for recommender systems. IEEE computer society.
 
-2. Paterek, A. (2007). Improving regularized singular value decomposition for collaborative filtering. KDDCup.07.
+ 2. Paterek, A. (2007). Improving regularized singular value decomposition for collaborative filtering. KDDCup.07.
 
-3. Koren, Y. (2009). Collaborative filtering with temporal dynamics. KDD'09.       
+ 3. Koren, Y. (2009). Collaborative filtering with temporal dynamics. KDD'09.       
         
 	
-**Contribution statement**: All team members contributed in all stages of this project. 
++ **Contribution statement**: All team members contributed in all stages of this project. 
   
   + **Siqi Zhao** 
   
