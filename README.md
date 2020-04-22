@@ -14,9 +14,43 @@ Term: Spring 2020
 	+ Lu Cheng
     + Jacquelyn Blum
 
-+ Project summary: In this project, our group implement the matrix factorization algorithm for recommender system and compare two diffenrent methods of post processing. The matrix factorization algorithm outputs a feature matrix for both users and movies so that one can predict the rating of a specific user - movie pair using those matrix. First, we include temporal effect of users and movies in the loss function. Second we build the algorithm using stochastic gradient descent to estimate the parameters in the loss function. Then we use cross - validation to choose the best parameters. Last we compare the test RMSE of two different postprocessing methods - KNN and kernel ridge regression. In the result we find out that ...  
++ Project summary: In this project, our group implement the matrix factorization algorithm for recommender system and compare two diffenrent methods of post processing. The matrix factorization algorithm outputs a feature matrix for both users and movies so that one can predict the rating of a specific user - movie pair using those matrix. First, we include temporal effect of users and movies in the loss function. Second we build the algorithm using stochastic gradient descent to estimate the parameters in the loss function. Then we use cross - validation to choose the best parameters. Last we compare the test RMSE and train RMSE of two different postprocessing methods - KNN and kernel ridge regression. 
+        
+	
+    + Result
 
-**Contribution statement**: [default] All team members contributed equally in all stages of this project. All team members approve our work presented in this GitHub repository including this contributions statement. 
+     | Method      | Train RMSE  | Test RMSE |
+     | ------------- |:-------------:| ------------:|
+     | Without Postprocessing      |   0.50   | 1.06  |
+     | Postprocessing SVD with KNN | 1.21 | 1.20   |
+     | Postprocessing SVD with kernel ridge regression | 1.25 | 1.32  |      
+        
+	
++ Reference    
+              
+ 1. Koren, Y., Bell, R. & Volinsky, C. (2009). Matrix factorization techniques for recommender systems. IEEE computer society.
+
+ 2. Paterek, A. (2007). Improving regularized singular value decomposition for collaborative filtering. KDDCup.07.
+
+ 3. Koren, Y. (2009). Collaborative filtering with temporal dynamics. KDD'09.       
+        
+	
++ **Contribution statement**: All team members contributed in all stages of this project. 
+  
+  + **Siqi Zhao** 
+  
+  + **Vikki Sui** 
+  
+  + **Liangcao Ling**  
+  
+  + **Sol Lee** 
+
+  + **Lu Cheng**    
+        
+  + **Jacquelyn Blum**    
+  
+  All team members approve our work presented in this GitHub repository including this contributions statement.
+
 
 Following [suggestions](http://nicercode.github.io/blog/2013-04-05-projects/) by [RICH FITZJOHN](http://nicercode.github.io/about/#Team) (@richfitz). This folder is orgarnized as follows.
 
