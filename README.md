@@ -17,13 +17,13 @@ Term: Spring 2020
 + Project summary: In this project, our group implement the matrix factorization algorithm for recommender system and compare two diffenrent methods of post processing. The matrix factorization algorithm outputs a feature matrix for both users and movies so that one can predict the rating of a specific user - movie pair using those matrix. First, we include temporal effect of users and movies in the loss function. Second we build the algorithm using stochastic gradient descent to estimate the parameters in the loss function. Then we use cross - validation to choose the best parameters. Last we compare the test RMSE and train RMSE of two different postprocessing methods - KNN and kernel ridge regression. 
         
 	
-+ Result
+      + Result
 
-| Method      | Train RMSE  | Test RMSE |
-| ------------- |:-------------:| ------------:|
-| Without Postprocessing      |   0.50   | 1.06  |
-| Postprocessing SVD with KNN | 1.21 | 1.20   |
-| Postprocessing SVD with kernel ridge regression | 1.25 | 1.32  |      
+      | Method      | Train RMSE  | Test RMSE |
+      | ------------- |:-------------:| ------------:|
+      | Without Postprocessing      |   0.50   | 1.06  |
+      | Postprocessing SVD with KNN | 1.21 | 1.20   |
+      | Postprocessing SVD with kernel ridge regression | 1.25 | 1.32  |      
         
 	
 + Reference    
