@@ -1645,9 +1645,9 @@ summary {
 <li><p>regularization: Temporal Dynamics</p></li>
 <li><p>postpocessing: KNN &amp; Kernel Ridge Regression</p></li>
 </ul>
-<p><strong>Model Setup:</strong> Let <span class="math display">\[\hat{r_{ui}} = \mu + b_{i}(t) + b_{u} + q^{T}p\]</span> where <span class="math display">\[b_{i}(t) = b_{i} + b_{i,Bin(t)}\]</span> and <span class="math inline">\(\mu\)</span> is the average of all ratings.</p>
+<p><strong>Model Setup:</strong> Let <span class="math display">\[\hat{r_{ui}} = \mu + b_{i}(t) + b_{u} + q_{i}^{T}p_{u}\]</span> where <span class="math display">\[b_{i}(t) = b_{i} + b_{i,Bin(t)}\]</span> and <span class="math inline">\(\mu\)</span> is the average of all ratings.</p>
 <p>The objective function is then:</p>
-<p><span class="math display">\[Minimze \quad \sum_{n=1}^{10} (r_{ui} - \mu - b_{i}- b_{i,Bin(t)} - b_{u} -
+<p><span class="math display">\[Minimze \quad \sum  (r_{ui} - \mu - b_{i}- b_{i,Bin(t)} - b_{u} -
 q_{i}^{T}p_{u}) + \lambda(||q_{i}^2|| + ||p_{u}^2|| + b_{i}^2 + b_{i,Bin(t)}^2 + b_{u}^2)\]</span></p>
 <p>Our goal is to minimize the objective function using stochastic gradient descent, apply the estimated parameters to two different postporcessing process, and compare their results.</p>
 <div id="step-1-load-data-and-train-test-split" class="section level3">
@@ -1682,6 +1682,7 @@ data_bins &lt;- bins(data=data) </code></pre>
 <li><p>Algorithm: Stochastic Gradient Descent (A1)</p></li>
 <li><p>Regularizations: Temporal Dynamics (R3)</p></li>
 </ul>
+<p>First, we take a subset of 5000 samples in the original data to do the cross validation because it takes too long to do the cross validation on the whole data set.</p>
 <pre class="r"><code>index &lt;- sample(1:100000, 5000)
 test_idx &lt;- sample(1:5000, 1000)
 train_idx &lt;- setdiff(1:5000, test_idx)
@@ -1693,35 +1694,11 @@ source(&quot;../lib/Matrix_Factorization.R&quot;)</code></pre>
 </div>
 <div id="step-2.2-parameter-tuning" class="section level4">
 <h4>Step 2.2 Parameter Tuning</h4>
-<p>We used cross validation to tune the 2 hyperparameters: f and lambda, and select the optimal combination by choosing the one with lowest test RMSE.</p>
+<p>Here we use cross validation to tune the 2 hyperparameters: f and lambda, and select the optimal combination by choosing the one with lowest test RMSE.</p>
 <pre class="r"><code>source(&quot;../lib/cross_validation.R&quot;)
 f_list &lt;- c(10, 20, 50)
 l_list &lt;- seq(-3,-1,1)
 f_l &lt;- expand.grid(f_list, l_list)</code></pre>
-<pre class="r"><code>if (run_all){
-  result_summary &lt;- array(NA, dim = c(4, 10, nrow(f_l)))
-  run_time &lt;- system.time(for(i in 1:nrow(f_l)){
-      par &lt;- paste(&quot;f = &quot;, f_l[i,1], &quot;, lambda = &quot;, 10^f_l[i,2])
-      cat(par, &quot;\n&quot;)
-      current_result &lt;- cv.function(data_m, K = 3, f = f_l[i,1], lambda = 10^f_l[i,2])
-      result_summary[,,i] &lt;- matrix(unlist(current_result), ncol = 10, byrow = T)
-      print(result_summary)
-  })
-  save(result_summary, file = &quot;../output/rmse.Rdata&quot;)
-}</code></pre>
-<pre class="r"><code>if(run_all){
-  load(&quot;../output/rmse.Rdata&quot;)
-  rmse &lt;- data.frame(rbind(t(result_summary[1,,]), t(result_summary[2,,])),
-                     train_test = rep(c(&quot;Train&quot;, &quot;Test&quot;), each = 9),
-                     par = rep(paste(&quot;f = &quot;, f_l[,1], &quot;, lambda = &quot;, 10^f_l[,2]), times = 2)) %&gt;%
-    gather(&quot;epoch&quot;, &quot;RMSE&quot;, -train_test, -par)
-  
-  rmse$epoch &lt;- as.numeric(gsub(&quot;X&quot;, &quot;&quot;, rmse$epoch))
-  
-  cv.result &lt;- ggplot(rmse, aes(x = epoch, y = RMSE, col = train_test)) + geom_point() +
-    facet_grid(~par)+ggtitle(&quot;RMSE of Tuning&quot;)
-  ggsave(plot=cv.result, filename = &quot;cv_result.jpg&quot;,height = 100, width = 400, units=&quot;mm&quot;)
-}</code></pre>
 <pre class="r"><code>#time1 &lt;- Sys.time()
 #6.59713 hours
 if(run_all){

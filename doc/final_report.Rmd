@@ -17,14 +17,14 @@ In this project, we applied the following methods for collaborative filtering:
 
 **Model Setup:**
 Let 
-$$\hat{r_{ui}} = \mu + b_{i}(t) + b_{u} + q^{T}p$$
+$$\hat{r_{ui}} = \mu + b_{i}(t) + b_{u} + q_{i}^{T}p_{u}$$
 where
 $$b_{i}(t) = b_{i} + b_{i,Bin(t)}$$
 and $\mu$ is the average of all ratings.
 
 The objective function is then: 
 
-$$Minimze \quad \sum_{n=1}^{10} (r_{ui} - \mu - b_{i}- b_{i,Bin(t)} - b_{u} -
+$$Minimze \quad \sum  (r_{ui} - \mu - b_{i}- b_{i,Bin(t)} - b_{u} -
 q_{i}^{T}p_{u}) + \lambda(||q_{i}^2|| + ||p_{u}^2|| + b_{i}^2 + b_{i,Bin(t)}^2 + b_{u}^2)$$ 
 
 Our goal is to minimize the objective function using stochastic gradient descent, apply the estimated parameters to two different postporcessing process, and compare their results.
@@ -64,6 +64,7 @@ data_bins <- bins(data=data)
 
 - Regularizations: Temporal Dynamics (R3)
 
+First, we take a subset of 5000 samples in the original data to do the cross validation because it takes too long to do the cross validation on the whole data set.
 
 ```{r}
 index <- sample(1:100000, 5000)
@@ -79,43 +80,13 @@ source("../lib/Matrix_Factorization.R")
 
 #### Step 2.2 Parameter Tuning
 
-We used cross validation to tune the 2 hyperparameters: f and lambda, and select the optimal combination by choosing the one with lowest test RMSE.
+Here we use cross validation to tune the 2 hyperparameters: f and lambda, and select the optimal combination by choosing the one with lowest test RMSE.
 
 ```{r}
 source("../lib/cross_validation.R")
 f_list <- c(10, 20, 50)
 l_list <- seq(-3,-1,1)
 f_l <- expand.grid(f_list, l_list)
-```
-
-```{r, eval=FALSE}
-if (run_all){
-  result_summary <- array(NA, dim = c(4, 10, nrow(f_l)))
-  run_time <- system.time(for(i in 1:nrow(f_l)){
-      par <- paste("f = ", f_l[i,1], ", lambda = ", 10^f_l[i,2])
-      cat(par, "\n")
-      current_result <- cv.function(data_m, K = 3, f = f_l[i,1], lambda = 10^f_l[i,2])
-      result_summary[,,i] <- matrix(unlist(current_result), ncol = 10, byrow = T)
-      print(result_summary)
-  })
-  save(result_summary, file = "../output/rmse.Rdata")
-}
-```
-
-```{r}
-if(run_all){
-  load("../output/rmse.Rdata")
-  rmse <- data.frame(rbind(t(result_summary[1,,]), t(result_summary[2,,])),
-                     train_test = rep(c("Train", "Test"), each = 9),
-                     par = rep(paste("f = ", f_l[,1], ", lambda = ", 10^f_l[,2]), times = 2)) %>%
-    gather("epoch", "RMSE", -train_test, -par)
-  
-  rmse$epoch <- as.numeric(gsub("X", "", rmse$epoch))
-  
-  cv.result <- ggplot(rmse, aes(x = epoch, y = RMSE, col = train_test)) + geom_point() +
-    facet_grid(~par)+ggtitle("RMSE of Tuning")
-  ggsave(plot=cv.result, filename = "cv_result.jpg",height = 100, width = 400, units="mm")
-}
 ```
 
 ```{r, eval=FALSE}

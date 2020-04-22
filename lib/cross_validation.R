@@ -18,7 +18,7 @@ cv.function_r3 <- function(dat_train, K, f, lambda){
   train_rmse <- matrix(NA, ncol = 10,nrow = K)
   test_rmse <- matrix(NA, ncol = 10, nrow = K)
   
-  source("../lib/Matrix_Factorization_vk.R")
+  source("../lib/Matrix_Factorization.R")
   
   for (i in 1:K){
     train.data <- dat_train[s != i,]
