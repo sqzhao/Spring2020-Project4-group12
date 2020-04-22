@@ -46,17 +46,18 @@ Term: Spring 2020
 	
 + **Contribution statement**: All team members contributed in all stages of this project. 
   
-  + **Siqi Zhao** 
+  + **Siqi Zhao** coded the matrix factorization and attemped to incorporated the temporal effects of both movie and user. Siqi is the presenter for the project.
   
-  + **Vikki Sui** 
+  + **Vikki Sui** did the report before post processing and contributed to the implementation of matrix factorization.
   
-  + **Liangcao Ling**  
+  + **Liangcao Ling** wrote the draft of stochastic gradient descent algorithm，revised the kernel ridge regression method，
+and wrote the final report. Liangcao also edited the README file. 
   
-  + **Sol Lee** 
+  + **Sol Lee** contributed to the coding part of postprocessing SVD with KNN.
 
-  + **Lu Cheng**    
+  + **Lu Cheng** contributed to the coding part of postprocessing SVD with kernel ridge regression and edited the README file.  
         
-  + **Jacquelyn Blum**    
+  + **Jacquelyn Blum** helped Siqi organize and work on the slides for presentation.   
   
   All team members approve our work presented in this GitHub repository including this contributions statement.
 
