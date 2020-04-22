@@ -223,15 +223,25 @@ pred_knn <- function(data_train, data_test, q)
 
 
 ```{r}
-load(file = "../output/mat_fac_r3.RData")
-q <- result$q
-p2_result_test <- pred_knn(data_train, data_test, q)
-p2_result_train <- pred_knn(data_train, data_train, q)
-train_rmse_p2 <- p2_result_train['rmse_test']
-test_rmse_p2 <- p2_result_test['rmse_test']
+if (run_all){
+  load(file = "../output/mat_fac_r3.RData")
+  q <- result$q
+  p2_result_test <- pred_knn(data_train, data_test, q)
+  p2_result_train <- pred_knn(data_train, data_train, q)
+  train_rmse_p2 <- p2_result_train['rmse_test']
+  test_rmse_p2 <- p2_result_test['rmse_test']
+  save(train_rmse_p2, file = "../output/train_rmse_p2.Rdata")
+  save(test_rmse_p2, file = "../output/test_rmse_p2.Rdata")
+}
+```
+
+```{r}
+load(file = "../output/train_rmse_p2.RData")
+load(file = "../output/test_rmse_p2.RData")
 cat("The RMSE of the train set with Postprocessing (SVD with KNN) is", as.numeric(train_rmse_p2))
 cat("The RMSE of the test set with Postprocessing (SVD with KNN) is", as.numeric(test_rmse_p2))
 ```
+
 
 #### Postprocessing: SVD with kernel ridge regression
 ```{r}
