@@ -78,29 +78,33 @@ f_l <- expand.grid(f_list, l_list)
 ```
 
 ```{r, eval=FALSE}
-# result_summary <- array(NA, dim = c(4, 10, nrow(f_l))) 
-# run_time <- system.time(for(i in 1:nrow(f_l)){
-#     par <- paste("f = ", f_l[i,1], ", lambda = ", 10^f_l[i,2])
-#     cat(par, "\n")
-#     current_result <- cv.function(data_m, K = 3, f = f_l[i,1], lambda = 10^f_l[i,2])
-#     result_summary[,,i] <- matrix(unlist(current_result), ncol = 10, byrow = T) 
-#     print(result_summary)
-# })
-# save(result_summary, file = "../output/rmse.Rdata")
+if (run_all){
+  result_summary <- array(NA, dim = c(4, 10, nrow(f_l)))
+  run_time <- system.time(for(i in 1:nrow(f_l)){
+      par <- paste("f = ", f_l[i,1], ", lambda = ", 10^f_l[i,2])
+      cat(par, "\n")
+      current_result <- cv.function(data_m, K = 3, f = f_l[i,1], lambda = 10^f_l[i,2])
+      result_summary[,,i] <- matrix(unlist(current_result), ncol = 10, byrow = T)
+      print(result_summary)
+  })
+  save(result_summary, file = "../output/rmse.Rdata")
+}
 ```
 
 ```{r}
-# load("../output/rmse.Rdata")
-# rmse <- data.frame(rbind(t(result_summary[1,,]), t(result_summary[2,,])), 
-#                    train_test = rep(c("Train", "Test"), each = 9), 
-#                    par = rep(paste("f = ", f_l[,1], ", lambda = ", 10^f_l[,2]), times = 2)) %>%
-#   gather("epoch", "RMSE", -train_test, -par)
-# 
-# rmse$epoch <- as.numeric(gsub("X", "", rmse$epoch))
-# 
-# cv.result <- ggplot(rmse, aes(x = epoch, y = RMSE, col = train_test)) + geom_point() + 
-#   facet_grid(~par)+ggtitle("RMSE of Tuning")
-# ggsave(plot=cv.result, filename = "cv_result.jpg",height = 100, width = 400, units="mm")
+if(run_all){
+  load("../output/rmse.Rdata")
+  rmse <- data.frame(rbind(t(result_summary[1,,]), t(result_summary[2,,])),
+                     train_test = rep(c("Train", "Test"), each = 9),
+                     par = rep(paste("f = ", f_l[,1], ", lambda = ", 10^f_l[,2]), times = 2)) %>%
+    gather("epoch", "RMSE", -train_test, -par)
+  
+  rmse$epoch <- as.numeric(gsub("X", "", rmse$epoch))
+  
+  cv.result <- ggplot(rmse, aes(x = epoch, y = RMSE, col = train_test)) + geom_point() +
+    facet_grid(~par)+ggtitle("RMSE of Tuning")
+  ggsave(plot=cv.result, filename = "cv_result.jpg",height = 100, width = 400, units="mm")
+}
 ```
 
 ```{r, eval=FALSE}
@@ -222,11 +226,14 @@ pred_knn <- function(data_train, data_test, q)
 load(file = "../output/mat_fac_r3.RData")
 q <- result$q
 p2_result_test <- pred_knn(data_train, data_test, q)
+p2_result_train <- pred_knn(data_train, data_train, q)
+train_rmse_p2 <- p2_result_train['rmse_test']
 test_rmse_p2 <- p2_result_test['rmse_test']
-cat("The RMSE of Algorithm with Postprocessing (SVD with KNN) is", as.numeric(test_rmse_p2))
+cat("The RMSE of the train set with Postprocessing (SVD with KNN) is", as.numeric(train_rmse_p2))
+cat("The RMSE of the test set with Postprocessing (SVD with KNN) is", as.numeric(test_rmse_p2))
 ```
 
-#### Postprocessing: SVD with kernel ridge regressio
+#### Postprocessing: SVD with kernel ridge regression
 ```{r}
 load(file = "../output/mat_fac_r3.RData")
 q <- result$q
