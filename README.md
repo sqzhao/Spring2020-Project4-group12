@@ -22,8 +22,17 @@ Term: Spring 2020
 | ------------- |:-------------:| ------------:|
 | Without Postprocessing      |   0.50   | 1.06  |
 | Postprocessing SVD with KNN | 1.21 | 1.20   |
-| Postprocessing SVD with kernel ridge regression | 1.25 | 1.32  |
+| Postprocessing SVD with kernel ridge regression | 1.25 | 1.32  |      
+        
++ Reference    
+              
+1. Koren, Y., Bell, R. & Volinsky, C. (2009). Matrix factorization techniques for recommender systems. IEEE computer society.
 
+2. Paterek, A. (2007). Improving regularized singular value decomposition for collaborative filtering. KDDCup.07.
+
+3. Koren, Y. (2009). Collaborative filtering with temporal dynamics. KDD'09.
+
+  
 
 **Contribution statement**: [default] All team members contributed equally in all stages of this project. All team members approve our work presented in this GitHub repository including this contributions statement. 
 
