@@ -2,9 +2,9 @@
 title: "Project 4 Report"
 author: "Group 12"
 output:
-  pdf_document: default
   html_document:
     df_print: paged
+  pdf_document: default
 ---
 
 In this project, we applied the following methods for collaborative filtering:
@@ -15,11 +15,23 @@ In this project, we applied the following methods for collaborative filtering:
 
 - postpocessing: KNN & Kernel Ridge Regression
 
-Our objective is to compare the postporcessing process, and evaluate their results.
+**Model Setup:**
+Let 
+$$\hat{r_{ui}} = \mu + b_{i}(t) + b_{u} + q^{T}p$$
+where
+$$b_{i}(t) = b_{i} + b_{i,Bin(t)}$$
+and $\mu$ is the average of all ratings.
+
+The objective function is then: 
+
+$$Minimze \quad \sum_{n=1}^{10} (r_{ui} - \mu - b_{i}- b_{i,Bin(t)} - b_{u} -
+q_{i}^{T}p_{u}) + \lambda(||q_{i}^2|| + ||p_{u}^2|| + b_{i}^2 + b_{i,Bin(t)}^2 + b_{u}^2)$$ 
+
+Our goal is to minimize the objective function using stochastic gradient descent, apply the estimated parameters to two different postporcessing process, and compare their results.
 
 ### Step 1 Load Data and Train-test Split
 
-```{r Data Preparison warning=FALSE, message=FALSE}
+```{r warning=FALSE, message=FALSE}
 library(dplyr)
 library(tidyr)
 library(ggplot2)
@@ -52,6 +64,7 @@ data_bins <- bins(data=data)
 
 - Regularizations: Temporal Dynamics (R3)
 
+
 ```{r}
 index <- sample(1:100000, 5000)
 test_idx <- sample(1:5000, 1000)
@@ -60,18 +73,16 @@ data_train <- data_bins[train_idx,]
 data_test <- data_bins[test_idx,]
 U <- length(unique(data_bins[index,]$userId)) #610
 I <- length(unique(data_bins[index,]$movieId)) #9724
-source("../lib/Matrix_Factorization_vk.R")
 source("../lib/Matrix_Factorization.R")
 ```
 
 
 #### Step 2.2 Parameter Tuning
 
-We used cross validation to tune the 2 hyperparameters: f and lambda, and select the optimal combination by choosing the one with lowest test RMSE
+We used cross validation to tune the 2 hyperparameters: f and lambda, and select the optimal combination by choosing the one with lowest test RMSE.
 
 ```{r}
 source("../lib/cross_validation.R")
-source("../lib/cross_validation_vk.R")
 f_list <- c(10, 20, 50)
 l_list <- seq(-3,-1,1)
 f_l <- expand.grid(f_list, l_list)
@@ -125,18 +136,21 @@ save(result_summary, file = "../output/rmse_r3.Rdata")
 }
 ```
 
+
 ```{r}
+if(run_all){
 load("../output/rmse_r3.Rdata")
 rmse_r3 <- data.frame(rbind(t(result_summary[1,,]), t(result_summary[2,,])), 
                    train_test = rep(c("Train", "Test"), each = 9), 
-                   par = rep(paste("f = ", f_l[,1], ", lambda = ", 10^f_l[,2]), times = 2)) %>%
+                   par = rep(paste("f:", f_l[,1], ", lambda:", 10^f_l[,2]), times = 2)) %>%
   gather("epoch", "RMSE", -train_test, -par)
 
 rmse_r3$epoch <- as.numeric(gsub("X", "", rmse_r3$epoch))
 
 ggplot(rmse_r3, aes(x = epoch, y = RMSE, col = train_test)) + geom_point() + 
-  facet_grid(~par)+ggtitle("RMSE of Tuning")
+  facet_grid(~par)+ggtitle("RMSE of Tuning")}
 ```
+ ![](../figs/fig.png) 
 
 ```{r}
 test_idx <- sample(1:nrow(data_bins), round(nrow(data_bins)/5, 0))
@@ -147,6 +161,7 @@ U <- length(unique(data_bins$userId)) #610
 I <- length(unique(data_bins$movieId)) #9724
 ```
 
+After finding the best parameters combination (f = 10, lambda = 0.1), we run Stochastic Gradient Descent to estimate all the parameters in the objective function which includes $b_{i}$, $b_{i,Bin(t)}$, $b_{u}$, $p_{u}$ and $q_{i}$.
 
 ```{r, eval= FALSE}
 if (run_all){
@@ -163,22 +178,8 @@ if (run_all){
 }
 ```
 
-```{r}
-load(file = "../output/mat_fac_r3.RData")
-
-RMSE_r3 <- data.frame(epochs = seq(10, 100, 10), 
-                   Training_MSE = result$train_RMSE, 
-                   Test_MSE = result$test_RMSE) %>% 
-  gather(key = train_or_test, value = RMSE, -epochs)
-
-ggplot(RMSE_r3, aes(x = epochs, y = RMSE,col = train_or_test)) + 
-  geom_point() + scale_x_discrete(limits = seq(10, 100, 10)) + 
-  xlim(c(0, 100)) + 
-  ggtitle("RMSE (f=10, lambda=0.1)")
-```
-
 ### Step 3 Postprocessing
-After matrix factorization, postporcessing will be performed to improve accuracy.
+After matrix factorization, postporcessing will be performed.
 The referenced papers are:
 
 P2:[Postprocessing SVD with KNN](./paper/P2 Improving regularized singular value decomposition for collaborative filtering .pdf) Section 3.5
@@ -186,8 +187,7 @@ P2:[Postprocessing SVD with KNN](./paper/P2 Improving regularized singular value
 P3:[Postprocessing SVD with kernel ridge regression](./paper/P2 Improving regularized singular value decomposition for collaborative filtering .pdf) Section 3.6
 
 #### Postprocessing: SVD with KNN
-
-After matrix factorization, postporcessing will be performed to improve accuracy.
+The first Postprocessing method we use is KNN. Notice that we only need matrix q in the previous sections to do the postprocessing. 
 
 KNN Function
 ```{r}
@@ -238,16 +238,17 @@ if (run_all){
 ```{r}
 load(file = "../output/train_rmse_p2.RData")
 load(file = "../output/test_rmse_p2.RData")
-cat("The RMSE of the train set with Postprocessing (SVD with KNN) is", as.numeric(train_rmse_p2))
-cat("The RMSE of the test set with Postprocessing (SVD with KNN) is", as.numeric(test_rmse_p2))
+print(paste("The RMSE of the train set with Postprocessing (SVD with KNN) is", 1.211423))
+print(paste("The RMSE of the test set with Postprocessing (SVD with KNN) is", 1.201936))
 ```
 
 
 #### Postprocessing: SVD with kernel ridge regression
+
+The second Postprocessing method we use is kernel ridge regression. 
 ```{r}
 load(file = "../output/mat_fac_r3.RData")
 q <- result$q
-rating <- read.csv("../data/ml-latest-small/ratings.csv")
 ```
 
 normalize each vector $q_i$, i.e.$\frac{q_i}{||q_i||}$    
@@ -260,6 +261,7 @@ norm_q <- apply(result$q, 2, norm_vec)
 # separate movieId from q dataset
 movieID <- colnames(q)
 ```
+
 ##### Tuning parameter for krr    
 set the kernel as Gaussian as Paper2 said and use cross validation to get a smaller RMSE.
 write a function to do cross validation for parameters lambda in krr
@@ -294,6 +296,7 @@ return(mean(test_rmse))}
    
 Find the best parameters that get a smaller rmse
 ```{r}
+if(run_all){
 lambdas <- c(4.0, 5.0, 6.0)
 rmse_tune <- data.frame(lambdas = numeric(), rmse = numeric())
 #rmse_tune <- data.frame()
@@ -307,7 +310,7 @@ colnames(rmse_tune) <- c("lambda", "rmse")
 
 min_rmse <- rmse_tune %>%
   filter(rmse == min(rmse))
-best_para <- min_rmse[,1]
+best_para <- min_rmse[,1]}
 # best_para  lambda = 4
 ```
 
@@ -315,7 +318,7 @@ best_para <- min_rmse[,1]
 use the best lambda to train 610 kernel ridge regression models.
 ```{r}
 t0 <- Sys.time()
-
+if(run_all){
 train_model <- vector(mode="list",length = 610)
 for(i in 1:610){
   userID = as.character(i)
@@ -328,13 +331,13 @@ t1 <- Sys.time()
 
 training_time <- t1 - t0
 training_time
-
+}
 # Time difference of 56.20646 secs
 ```
     
 compute rmse
 ```{r}
-
+if(run_all){
 rmse.fn <- function(data){
   error <- 0
   for (i in 1:610){
@@ -352,24 +355,20 @@ rmse.fn <- function(data){
 
 
 test_rmse <- rmse.fn(data_test)
-train_rmse <- rmse.fn(data_train)
-
-
+train_rmse <- rmse.fn(data_train)}
 #test_rmse 1.32
 #train_rmse 1.25
 
-
+print(paste("The RMSE of the train set with Postprocessing (SVD with kernel ridge regression) is", 1,25))
+print(paste("The RMSE of the test set with Postprocessing (SVD with kernel ridge regression) is", 1.32))
 ```
 
 ### Step 4 Evaluation
-You should visualize training and testing RMSE by different dimension of factors and epochs ([One Epoch is when an ENTIRE dataset is passed forward and backward through the neural network only ONCE](https://towardsdatascience.com/epoch-vs-iterations-vs-batch-size-4dfb9c7ce9c9)). 
 
+We can see that SVD with KNN is better than SVD with Kernel Ridge Regression. More interestingly, the Stochastic Gradient Descent without postprocessing can achieve better test RMSE than both postprocessing methods. We assume that this is because when using postprocessing methods, we abandon several parameters related to temporal effects (which is an important part in the loss function). 
 ```{r}
-library(ggplot2)
 
-RMSE <- data.frame(epochs = seq(10, 100, 10), Training_MSE = result$train_RMSE, Test_MSE = result$test_RMSE) %>% gather(key = train_or_test, value = RMSE, -epochs)
-
-RMSE %>% ggplot(aes(x = epochs, y = RMSE,col = train_or_test)) + geom_point() + scale_x_discrete(limits = seq(10, 100, 10)) + xlim(c(0, 100))
-
+table<- tibble(method = c('without postprocessing','KNN','Kernel Ridge Regression'), train_rmse = c(0.50,1.21, 1.25), test_rmse = c(1.06,1.20, 1.32))
+table
 ```
 
