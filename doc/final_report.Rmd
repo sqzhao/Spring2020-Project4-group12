@@ -83,6 +83,9 @@ source("../lib/Matrix_Factorization.R")
 Here we use cross validation to tune the 2 hyperparameters: f and lambda, and select the optimal combination by choosing the one with lowest test RMSE.
 
 ```{r}
+
+# generate a data frame that contains all the (f, lambda) combinations to do the cross validation
+
 source("../lib/cross_validation.R")
 f_list <- c(10, 20, 50)
 l_list <- seq(-3,-1,1)
@@ -109,6 +112,9 @@ save(result_summary, file = "../output/rmse_r3.Rdata")
 
 
 ```{r}
+
+# plot and compare the result of cross validation
+
 if(run_all){
 load("../output/rmse_r3.Rdata")
 rmse_r3 <- data.frame(rbind(t(result_summary[1,,]), t(result_summary[2,,])), 
@@ -124,6 +130,10 @@ ggplot(rmse_r3, aes(x = epoch, y = RMSE, col = train_test)) + geom_point() +
  ![](../figs/fig.png) 
 
 ```{r}
+
+# because we only cross validate on the subset of the original data
+# here we split the data for training the model
+
 test_idx <- sample(1:nrow(data_bins), round(nrow(data_bins)/5, 0))
 train_idx <- setdiff(1:nrow(data), test_idx)
 data_train <- data_bins[train_idx,]
@@ -138,7 +148,6 @@ After finding the best parameters combination (f = 10, lambda = 0.1), we run Sto
 if (run_all){
     result <- gradesc.r3(f = 10, lambda = 0.1,lrate = 0.01, max.iter = 100, stopping.deriv = 0.01,
                      data = data_bins, train = data_train, test = data_test)
-  
   save(result, file = "../output/mat_fac_r3.RData")
   write.csv(result$p, file = "../output/p.csv")
   write.csv(result$q, file = "../output/q.csv")
@@ -150,6 +159,7 @@ if (run_all){
 ```
 
 ### Step 3 Postprocessing
+
 After matrix factorization, postporcessing will be performed.
 The referenced papers are:
 
@@ -160,16 +170,12 @@ P3:[Postprocessing SVD with kernel ridge regression](./paper/P2 Improving regula
 #### Postprocessing: SVD with KNN
 The first Postprocessing method we use is KNN. Notice that we only need matrix q in the previous sections to do the postprocessing. 
 
-KNN Function
+Here is the definition of KNN postprocessing function.
 ```{r}
-vec <- function(x) {
-  
-  return(sqrt(sum(x^2)))
-  
-  }
+vec <- function(x) {return(sqrt(sum(x^2)))}
+
 pred_knn <- function(data_train, data_test, q)
 {
-  
   norm_q <- apply(q,2,vec)
   sim <- t(t((t(q) %*% q)/ norm_q) / norm_q)
   colnames(sim) <- colnames(q)
@@ -185,7 +191,6 @@ pred_knn <- function(data_train, data_test, q)
     movie <- names(sim_vec)[which.max(sim_vec)]
     pred_test[i] <- train[train$movieId == movie,][3]
   }
-  
   pred_test <- as.matrix(unlist(pred_test))
   rmse_test <- sqrt(mean((data_test$rating-pred_test)^2))
   return(list(pred_test = pred_test, rmse_test = rmse_test))
@@ -194,8 +199,11 @@ pred_knn <- function(data_train, data_test, q)
 
 
 ```{r}
+
+# load the result from stochastic gradient descent algorithm and do the KNN postprocessing
+
+load(file = "../output/mat_fac_r3.RData")
 if (run_all){
-  load(file = "../output/mat_fac_r3.RData")
   q <- result$q
   p2_result_test <- pred_knn(data_train, data_test, q)
   p2_result_train <- pred_knn(data_train, data_train, q)
@@ -216,14 +224,11 @@ print(paste("The RMSE of the test set with Postprocessing (SVD with KNN) is", 1.
 
 #### Postprocessing: SVD with kernel ridge regression
 
-The second Postprocessing method we use is kernel ridge regression. 
-```{r}
-load(file = "../output/mat_fac_r3.RData")
-q <- result$q
-```
+The second Postprocessing method we use is kernel ridge regression. In kernel ridge regression, we need matrix q and true ratings in the previous sections and implement kernel ridge regression between ratings (as response variable) and q (as design matrix).
 
-normalize each vector $q_i$, i.e.$\frac{q_i}{||q_i||}$    
 ```{r}
+# normalize the matrix q by column
+
 library(krr)
 library("pracma")
 norm_vec <- function(x) {return(x/Norm(x))}
@@ -234,16 +239,16 @@ movieID <- colnames(q)
 ```
 
 ##### Tuning parameter for krr    
-set the kernel as Gaussian as Paper2 said and use cross validation to get a smaller RMSE.
-write a function to do cross validation for parameters lambda in krr
+
+We set the kernel as Gaussian as Paper2 said and use cross validation to tune in parameter lambda in kernel ridge regression. The definition of cross validation function for parameter lambda is as follows.
 
 ```{r}
 cv.krr <- function(dat_train,K, lambda){
-n <- dim(dat_train)[1]
-n.fold <- round(n/K, 0)
-set.seed(0)
-s <- sample(rep(1:K, c(rep(n.fold, K-1), n-(K-1)*n.fold)))  
-test_rmse<-rep(0,K)
+    n <- dim(dat_train)[1]
+    n.fold <- round(n/K, 0)
+    set.seed(0)
+    s <- sample(rep(1:K, c(rep(n.fold, K-1), n-(K-1)*n.fold)))  
+    test_rmse<-rep(0,K)
 
 for (j in 1:K){
     train.data <- dat_train[s != j,]
@@ -265,13 +270,16 @@ for(i in 1:610){
 return(mean(test_rmse))}
 ```
    
-Find the best parameters that get a smaller rmse
+
 ```{r}
+
+# find the best parameter that get a smaller test rmse
+
 if(run_all){
-lambdas <- c(4.0, 5.0, 6.0)
-rmse_tune <- data.frame(lambdas = numeric(), rmse = numeric())
-#rmse_tune <- data.frame()
-colnames(rmse_tune) <- c("lambda", "rmse")
+    lambdas <- c(4.0, 5.0, 6.0)
+    rmse_tune <- data.frame(lambdas = numeric(), rmse = numeric())
+    #rmse_tune <- data.frame()
+    colnames(rmse_tune) <- c("lambda", "rmse")
 
 for (f in 1:length(lambdas)){
     m <- cv.krr(data_train, 5, lambdas[f])
@@ -279,15 +287,14 @@ for (f in 1:length(lambdas)){
 }
 colnames(rmse_tune) <- c("lambda", "rmse")
 
-min_rmse <- rmse_tune %>%
-  filter(rmse == min(rmse))
+min_rmse <- rmse_tune %>% filter(rmse == min(rmse))
 best_para <- min_rmse[,1]}
 # best_para  lambda = 4
 ```
 
-        
-use the best lambda to train 610 kernel ridge regression models.
 ```{r}
+# use the best lambda to train a total of 610 kernel ridge regression models. one for each user
+
 t0 <- Sys.time()
 if(run_all){
 train_model <- vector(mode="list",length = 610)
@@ -306,8 +313,10 @@ training_time
 # Time difference of 56.20646 secs
 ```
     
-compute rmse
 ```{r}
+
+# compute the overall rmse
+
 if(run_all){
 rmse.fn <- function(data){
   error <- 0
@@ -319,9 +328,7 @@ rmse.fn <- function(data){
     ytrue <- data$rating[which(data$userId == userID)]
     error <- error + sum((ynew - ytrue)^ 2)
   }
-
   return(sqrt(error / nrow(data)))
-
 }
 
 
@@ -336,8 +343,13 @@ print(paste("The RMSE of the test set with Postprocessing (SVD with kernel ridge
 
 ### Step 4 Evaluation
 
-We can see that SVD with KNN is better than SVD with Kernel Ridge Regression. More interestingly, the Stochastic Gradient Descent without postprocessing can achieve better test RMSE than both postprocessing methods. We assume that this is because when using postprocessing methods, we abandon several parameters related to temporal effects (which is an important part in the loss function). 
+In terms of test rmse, We can see that SVD with KNN is better than SVD with Kernel Ridge Regression. More interestingly, the Stochastic Gradient Descent without postprocessing can achieve better test RMSE than both postprocessing methods. We assume that this is because when using postprocessing methods, we abandon several parameters related to temporal effects (which is an important part in the loss function). 
+
+In terms of computational efficiency, the time of cross validation takes about 6 hours and the time of stochatic gradient descent may take about 10 minutes. The time of postprocessing is always within several minutes, which is very fast.
+
 ```{r}
+
+# generate the table that compares the test rmse
 
 table<- tibble(method = c('without postprocessing','KNN','Kernel Ridge Regression'), train_rmse = c(0.50,1.21, 1.25), test_rmse = c(1.06,1.20, 1.32))
 table
