@@ -2,8 +2,6 @@
 title: "Project 4 Report"
 author: "Group 12"
 output:
-  html_document:
-    df_print: paged
   pdf_document: default
 ---
 
@@ -234,7 +232,7 @@ The second Postprocessing method we use is kernel ridge regression. In kernel ri
 ```{r}
 # normalize the matrix q by column
 
-library(krr)
+#library(krr)
 library("pracma")
 norm_vec <- function(x) {return(x/Norm(x))}
 norm_q <- apply(result$q, 2, norm_vec)
