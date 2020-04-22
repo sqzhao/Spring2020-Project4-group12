@@ -47,10 +47,11 @@ set.seed(0)
 bins <- function(data = data){
   data$date <- anytime(data$timestamp) %>% format("%Y/%m/%d") 
   df <- data %>% mutate(year = year(date), bin_label = year-1995) %>% 
-  data.frame() %>% select(userId, movieId, rating, timestamp, bin_label, date, year)
+    data.frame() %>% 
+    select(userId, movieId, rating, timestamp, bin_label, date, year)
   min_day <- df %>% summarise(as.Date(min(date))) %>% as.numeric()
-  df <- df %>% mutate(days_diff=as.numeric(as.Date(date)-min_day)+1) 
-  %>% group_by(userId) %>% mutate(user_mean_date=mean(days_diff))
+  df <- df %>% mutate(days_diff=as.numeric(as.Date(date)-min_day)+1) %>% 
+    group_by(userId) %>% mutate(user_mean_date=mean(days_diff))
   return(df)
 }
 

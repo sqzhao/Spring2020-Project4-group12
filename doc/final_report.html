@@ -1666,9 +1666,12 @@ set.seed(0)
 
 bins &lt;- function(data = data){
   data$date &lt;- anytime(data$timestamp) %&gt;% format(&quot;%Y/%m/%d&quot;) 
-  df &lt;- data %&gt;% mutate(year = year(date), bin_label = year-1995) %&gt;% data.frame() %&gt;% select(userId, movieId, rating, timestamp, bin_label, date, year)
+  df &lt;- data %&gt;% mutate(year = year(date), bin_label = year-1995) %&gt;% 
+    data.frame() %&gt;% 
+    select(userId, movieId, rating, timestamp, bin_label, date, year)
   min_day &lt;- df %&gt;% summarise(as.Date(min(date))) %&gt;% as.numeric()
-  df &lt;- df %&gt;% mutate(days_diff=as.numeric(as.Date(date)-min_day)+1) %&gt;% group_by(userId) %&gt;% mutate(user_mean_date=mean(days_diff))
+  df &lt;- df %&gt;% mutate(days_diff=as.numeric(as.Date(date)-min_day)+1) %&gt;% 
+    group_by(userId) %&gt;% mutate(user_mean_date=mean(days_diff))
   return(df)
 }
 
@@ -1695,7 +1698,7 @@ source(&quot;../lib/Matrix_Factorization.R&quot;)</code></pre>
 <div id="step-2.2-parameter-tuning" class="section level4">
 <h4>Step 2.2 Parameter Tuning</h4>
 <p>Here we use cross validation to tune the 2 hyperparameters: f and lambda, and select the optimal combination by choosing the one with lowest test RMSE.</p>
-<pre class="r"><code># generate a data frame that contains all the (f, lambda) combinations to do the cross validation
+<pre class="r"><code># generate a data frame contains all the (f, lambda) pairs to do the cross validation
 
 source(&quot;../lib/cross_validation.R&quot;)
 f_list &lt;- c(10, 20, 50)
@@ -1708,7 +1711,8 @@ if(run_all){
 run_time &lt;- system.time(for(i in 1:nrow(f_l)){
     par &lt;- paste(&quot;f = &quot;, f_l[i,1], &quot;, lambda = &quot;, 10^f_l[i,2])
     cat(par, &quot;\n&quot;)
-    current_result &lt;- cv.function_r3(data_bins[index,], K = 3, f = f_l[i,1], lambda = 10^f_l[i,2])
+    current_result &lt;- cv.function_r3(data_bins[index,], K = 3, f = f_l[i,1], 
+                                     lambda = 10^f_l[i,2])
     result_summary[,,i] &lt;- matrix(unlist(current_result), ncol = 10, byrow = T) 
     #print(result_summary_r3)
 })
@@ -1741,8 +1745,9 @@ U &lt;- length(unique(data_bins$userId)) #610
 I &lt;- length(unique(data_bins$movieId)) #9724</code></pre>
 <p>After finding the best parameters combination (f = 10, lambda = 0.1), we run Stochastic Gradient Descent to estimate all the parameters in the objective function which includes <span class="math inline">\(b_{i}\)</span>, <span class="math inline">\(b_{i,Bin(t)}\)</span>, <span class="math inline">\(b_{u}\)</span>, <span class="math inline">\(p_{u}\)</span> and <span class="math inline">\(q_{i}\)</span>.</p>
 <pre class="r"><code>if (run_all){
-    result &lt;- gradesc.r3(f = 10, lambda = 0.1,lrate = 0.01, max.iter = 100, stopping.deriv = 0.01,
-                     data = data_bins, train = data_train, test = data_test)
+    result &lt;- gradesc.r3(f = 10, lambda = 0.1,lrate = 0.01, max.iter = 100, 
+                         stopping.deriv = 0.01,
+                         data = data_bins, train = data_train, test = data_test)
   save(result, file = &quot;../output/mat_fac_r3.RData&quot;)
   write.csv(result$p, file = &quot;../output/p.csv&quot;)
   write.csv(result$q, file = &quot;../output/q.csv&quot;)
@@ -1833,8 +1838,10 @@ for (j in 1:K){
 for(i in 1:610){
    userID = as.character(i)
 
-   movie_train_index &lt;- which(movieID %in% train.data$movieId[which(train.data$userId == userID)])
-   movie_test_index &lt;- which(movieID %in% test.data$movieId[which(test.data$userId == userID)])
+   movie_train_index &lt;- 
+     which(movieID %in% train.data$movieId[which(train.data$userId == userID)])
+   movie_test_index &lt;- 
+     which(movieID %in% test.data$movieId[which(test.data$userId == userID)])
    obj &lt;- krr(t(norm_q[, movie_train_index]), train.data$rating[movie_train_index],lambda)
    xnew &lt;- norm_q[, movie_test_index]
    ynew &lt;- predict(obj, t(xnew))
@@ -1869,8 +1876,10 @@ train_model &lt;- vector(mode=&quot;list&quot;,length = 610)
 for(i in 1:610){
   userID = as.character(i)
 
-  movie_train_index &lt;- which(movieID %in% data_train$movieId[which(data_train$userId == userID)])
-  train_model[[i]] = krr(t(norm_q[, movie_train_index]), data_train$rating[movie_train_index],best_para)
+  movie_train_index &lt;- 
+          which(movieID %in% data_train$movieId[which(data_train$userId == userID)])
+  train_model[[i]] &lt;- krr(t(norm_q[, movie_train_index]), 
+                          data_train$rating[movie_train_index],best_para)
 }
 
 t1 &lt;- Sys.time()
@@ -1901,9 +1910,11 @@ train_rmse &lt;- rmse.fn(data_train)}
 #test_rmse 1.32
 #train_rmse 1.25
 
-print(paste(&quot;The RMSE of the train set with Postprocessing (SVD with kernel ridge regression) is&quot;, 1,25))</code></pre>
+print(paste(&quot;The RMSE of the train set with Postprocessing (SVD with kernel ridge regression) is&quot;, 
+            1,25))</code></pre>
 <pre><code>## [1] &quot;The RMSE of the train set with Postprocessing (SVD with kernel ridge regression) is 1 25&quot;</code></pre>
-<pre class="r"><code>print(paste(&quot;The RMSE of the test set with Postprocessing (SVD with kernel ridge regression) is&quot;, 1.32))</code></pre>
+<pre class="r"><code>print(paste(&quot;The RMSE of the test set with Postprocessing (SVD with kernel ridge regression) is&quot;, 
+            1.32))</code></pre>
 <pre><code>## [1] &quot;The RMSE of the test set with Postprocessing (SVD with kernel ridge regression) is 1.32&quot;</code></pre>
 </div>
 </div>
@@ -1914,7 +1925,8 @@ print(paste(&quot;The RMSE of the train set with Postprocessing (SVD with kernel
 <p>In terms of computational efficiency, the time of cross validation takes about 6 hours and the time of stochatic gradient descent may take about 10 minutes. The time of postprocessing is always within several minutes, which is very fast.</p>
 <pre class="r"><code># generate the table that compares the test rmse
 
-table&lt;- tibble(method = c(&#39;without postprocessing&#39;,&#39;KNN&#39;,&#39;Kernel Ridge Regression&#39;), train_rmse = c(0.50,1.21, 1.25), test_rmse = c(1.06,1.20, 1.32))
+table&lt;- tibble(method = c(&#39;without postprocessing&#39;,&#39;KNN&#39;,&#39;Kernel Ridge Regression&#39;), 
+               train_rmse = c(0.50,1.21, 1.25), test_rmse = c(1.06,1.20, 1.32))
 table</code></pre>
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
