@@ -228,9 +228,121 @@ cat("The RMSE of Algorithm with Postprocessing (SVD with KNN) is", as.numeric(te
 
 #### Postprocessing: SVD with kernel ridge regressio
 ```{r}
-
+load(file = "../output/mat_fac_r3.RData")
+q <- result$q
+rating <- read.csv("../data/ml-latest-small/ratings.csv")
 ```
 
+normalize each vector $q_i$, i.e.$\frac{q_i}{||q_i||}$    
+```{r}
+library(krr)
+library("pracma")
+norm_vec <- function(x) {return(x/Norm(x))}
+norm_q <- apply(result$q, 2, norm_vec)
+
+# separate movieId from q dataset
+movieID <- colnames(q)
+```
+##### Tuning parameter for krr    
+set the kernel as Gaussian as Paper2 said and use cross validation to get a smaller RMSE.
+write a function to do cross validation for parameters lambda in krr
+
+```{r}
+cv.krr <- function(dat_train,K, lambda){
+n <- dim(dat_train)[1]
+n.fold <- round(n/K, 0)
+set.seed(0)
+s <- sample(rep(1:K, c(rep(n.fold, K-1), n-(K-1)*n.fold)))  
+test_rmse<-rep(0,K)
+
+for (j in 1:K){
+    train.data <- dat_train[s != j,]
+    test.data <- dat_train[s == j,]
+    tMSE <- 0
+for(i in 1:610){
+   userID = as.character(i)
+
+   movie_train_index <- which(movieID %in% train.data$movieId[which(train.data$userId == userID)])
+   movie_test_index <- which(movieID %in% test.data$movieId[which(test.data$userId == userID)])
+   obj <- krr(t(norm_q[, movie_train_index]), train.data$rating[movie_train_index],lambda)
+   xnew <- norm_q[, movie_test_index]
+   ynew <- predict(obj, t(xnew))
+   ytrue <- test.data$rating[which(test.data$userId == userID)]
+   tMSE <- tMSE + sum((ynew - ytrue)^ 2)
+ }
+   test_rmse[j]<-sqrt(tMSE/nrow(test.data))}
+
+return(mean(test_rmse))}
+```
+   
+Find the best parameters that get a smaller rmse
+```{r}
+lambdas <- c(4.0, 5.0, 6.0)
+rmse_tune <- data.frame(lambdas = numeric(), rmse = numeric())
+#rmse_tune <- data.frame()
+colnames(rmse_tune) <- c("lambda", "rmse")
+
+for (f in 1:length(lambdas)){
+    m <- cv.krr(data_train, 5, lambdas[f])
+    rmse_tune <- rbind(rmse_tune, c(lambdas[f], m))
+}
+colnames(rmse_tune) <- c("lambda", "rmse")
+
+min_rmse <- rmse_tune %>%
+  filter(rmse == min(rmse))
+best_para <- min_rmse[,1]
+# best_para  lambda = 4
+```
+
+        
+use the best lambda to train 610 kernel ridge regression models.
+```{r}
+t0 <- Sys.time()
+
+train_model <- vector(mode="list",length = 610)
+for(i in 1:610){
+  userID = as.character(i)
+
+  movie_train_index <- which(movieID %in% data_train$movieId[which(data_train$userId == userID)])
+  train_model[[i]] = krr(t(norm_q[, movie_train_index]), data_train$rating[movie_train_index],best_para)
+}
+
+t1 <- Sys.time()
+
+training_time <- t1 - t0
+training_time
+
+# Time difference of 56.20646 secs
+```
+    
+compute rmse
+```{r}
+
+rmse.fn <- function(data){
+  error <- 0
+  for (i in 1:610){
+    userID = as.character(i)
+    movie_test_index <- which(movieID %in% data$movieId[which(data$userId == userID)])
+    xnew <- norm_q[, movie_test_index]
+    ynew <- predict(train_model[[i]], t(xnew))
+    ytrue <- data$rating[which(data$userId == userID)]
+    error <- error + sum((ynew - ytrue)^ 2)
+  }
+
+  return(sqrt(error / nrow(data)))
+
+}
+
+
+test_rmse <- rmse.fn(data_test)
+train_rmse <- rmse.fn(data_train)
+
+
+#test_rmse 1.32
+#train_rmse 1.25
+
+
+```
 
 ### Step 4 Evaluation
 You should visualize training and testing RMSE by different dimension of factors and epochs ([One Epoch is when an ENTIRE dataset is passed forward and backward through the neural network only ONCE](https://towardsdatascience.com/epoch-vs-iterations-vs-batch-size-4dfb9c7ce9c9)). 
