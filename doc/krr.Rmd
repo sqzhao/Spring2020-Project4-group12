@@ -127,8 +127,6 @@ min_rmse <- rmse_tune %>%
 best_para <- min_rmse[,1]
 
 
-best_para
-
 ```
 
         
@@ -136,8 +134,8 @@ use the best lambda to train 610 kernel ridge regression models.
 ```{r}
 t0 <- Sys.time()
 
-train_model <- vector(mode="list",length = n_users)
-for(i in 1:n_users){
+train_model <- vector(mode="list",length = 610)
+for(i in 1:610){
   userID = as.character(i)
 
   movie_train_index <- which(movieID %in% data_train$movieId[which(data_train$userId == userID)])
