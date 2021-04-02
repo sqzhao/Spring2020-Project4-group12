@@ -19,15 +19,15 @@ Term: Spring 2020
 	
     + Result
 
-     | Method      | Train RMSE  | Test RMSE |
-     | ------------- |:-------------:| ------------:|
-     | Without Postprocessing      |   0.50   | 1.06  |
-     | Postprocessing SVD with KNN | 1.21 | 1.20   |
-     | Postprocessing SVD with kernel ridge regression | 1.25 | 1.32  |         
+     | Method      |  Test RMSE |
+     | ------------- | ------------:|
+     | Without Postprocessing      | 0.86  |
+     | Postprocessing SVD with KNN | 1.32   |
+     | Postprocessing SVD with kernel ridge regression | 0.98  |         
      
     + Evaluation    
       
-       + SVD with KNN is better than SVD with Kernel Ridge Regression.     
+       + SVD with KRR is better than SVD with KNN.     
        
        + It seems the Stochastic Gradient Descent without postprocessing can achieve better test RMSE than that with both 
          postprocessing methods. We assume that this is because when using postprocessing methods, we abandon several     parameters related to temporal effects, which is an important part in the loss function.
