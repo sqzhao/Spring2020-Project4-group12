@@ -46,7 +46,7 @@ Term: Spring 2020
 	
 + **Contribution statement**: All team members contributed in all stages of this project. 
   
-  + **Siqi Zhao** coded the matrix factorization and attemped to incorporated the temporal effects of both movie and user. Siqi is the presenter for the project.
+  + **Siqi Zhao** coded the matrix factorization and incorporated the temporal effects of both movie and user. Siqi is the presenter for the project. Upated the project with more granular temporal effects of users.
   
   + **Vikki Sui** did the report before post processing and contributed to the implementation of matrix factorization.
   
